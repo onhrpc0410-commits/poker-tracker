@@ -37,6 +37,7 @@ UI.players = {
       el('b', { className: p.balance < 0 ? 'neg' : 'pos', text: UI.fmt(p.balance) }),
       amt,
       el('button', { text: 'ADJUST', onclick: function () {
+        if (UI.session) { self.error = 'Finish or discard the game first.'; self.render(); return; }
         var n = amt.value === '' ? NaN : Number(amt.value);
         try { Store.adjustBalance(p.id, n); self.error = ''; } catch (e) { self.error = e.message; }
         self.render();
