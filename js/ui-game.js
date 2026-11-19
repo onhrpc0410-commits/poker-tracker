@@ -30,6 +30,7 @@ UI.game = {
       if (h && h.folded[p.id]) cls += ' folded';
       var bet = '';
       if (h) bet = h.folded[p.id] ? 'FOLD' : UI.fmt(h.bets[p.id]);
+      else bet = UI.fmtSigned(s.balances[p.id]);
       seats.appendChild(el('div', { className: cls }, [
         el('div', { className: 'sname', text: (h && h.blindIdx === i ? '[B] ' : '') + p.name }),
         el('div', { className: 'sbal', text: bet }),
@@ -87,20 +88,22 @@ UI.game = {
     if (live.length === 1) self.picked = [live[0].id];
     self.picked = self.picked.filter(function (id) { return live.some(function (p) { return p.id === id; }); });
     actions.appendChild(el('div', { className: 'turnname', text: 'Pick the winner' }));
+    var grid = el('div', { className: 'grid2' });
     live.forEach(function (p) {
       var on = self.picked.indexOf(p.id) >= 0;
-      actions.appendChild(el('button', { className: 'big' + (on ? ' go' : ''), text: p.name, onclick: function () {
+      grid.appendChild(el('button', { className: 'huge' + (on ? ' go' : ''), text: p.name, onclick: function () {
         if (on) self.picked.splice(self.picked.indexOf(p.id), 1); else self.picked.push(p.id);
         if (self.picked.length !== 1) self.bonus = false;
         self.render();
       } }));
     });
+    actions.appendChild(grid);
     var single = self.picked.length === 1;
     var cb = el('input', { type: 'checkbox', style: 'min-height:0;width:20px;height:20px' });
     cb.checked = self.bonus && single; cb.disabled = !single;
     cb.onchange = function () { self.bonus = cb.checked; };
     actions.appendChild(el('label', { className: 'small' }, [cb, el('span', { text: ' 7-2 BONUS' })]));
-    actions.appendChild(el('button', { className: 'big go', text: 'CONFIRM', disabled: self.picked.length ? null : 'disabled', onclick: function () {
+    actions.appendChild(el('button', { className: 'huge go full', text: 'CONFIRM', disabled: self.picked.length ? null : 'disabled', onclick: function () {
       var w = self.picked.slice(), b = self.bonus && single;
       self.picked = []; self.bonus = false;
       self.apply(function (x) { return Engine.settle(x, { winners: w, bonus72: b }); });
@@ -113,6 +116,6 @@ UI.game = {
       s.seats.forEach(function (p) { parts.push(p.name + ' ' + UI.fmtSigned(last.deltas[p.id])); });
       actions.appendChild(el('div', { className: 'turnname', text: 'Hand #' + last.n + (last.bonus72 ? ' (7-2)' : '') + ': ' + parts.join('   ') }));
     }
-    actions.appendChild(el('button', { className: 'big go', text: 'NEXT HAND', onclick: function () { self.apply(Engine.startHand); } }));
+    actions.appendChild(el('button', { className: 'huge go full', text: 'NEXT HAND', onclick: function () { self.apply(Engine.startHand); } }));
   }
 };
