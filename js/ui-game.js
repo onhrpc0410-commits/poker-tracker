@@ -12,12 +12,12 @@ UI.game = {
     if (!s) { UI.showScreen('players'); return; }
     var h = s.hand, pot = 0, id;
     if (h) for (id in h.bets) pot += h.bets[id];
-    root.appendChild(el('div', { className: 'potbg', text: UI.fmt(pot) }));
+    if (h) root.appendChild(el('div', { className: 'potbg', text: UI.fmt(pot) }));
     var box = el('div', { className: 'gamebox' });
     root.appendChild(box);
     box.appendChild(el('div', { className: 'toprow' }, [
-      el('b', { text: 'POT ' + UI.fmt(pot) }),
-      el('span', { text: h ? 'Hand #' + h.n + '  Round ' + h.round + '  Current bet ' + UI.fmt(h.currentBet) : 'Hand finished' }),
+      el('b', { text: h ? 'POT ' + UI.fmt(pot) : 'Balances' }),
+      el('span', { text: h ? 'Hand #' + h.n + '  Round ' + h.round + '  Current bet ' + UI.fmt(h.currentBet) : '' }),
       el('span', { className: 'grow' }),
       el('button', { text: 'UNDO', disabled: Engine.canUndo(s) ? null : 'disabled', onclick: function () { self.apply(Engine.undo); } }),
       el('button', { text: 'SUMMARY', onclick: function () { UI.showScreen('summary'); } })
@@ -37,8 +37,9 @@ UI.game = {
         el('div', { className: 'sbet', text: h && h.allIn[p.id] && !h.folded[p.id] ? 'ALL IN' : '' })
       ]));
     });
-    box.appendChild(seats);
+    if (h) box.appendChild(seats);
     box.appendChild(el('div', { className: 'err', text: self.error }));
+    if (!h) self.renderBalances(box);
     var actions = el('div', { className: 'actions' });
     box.appendChild(actions);
     if (!h) self.renderBetween(actions);
@@ -109,13 +110,20 @@ UI.game = {
       self.apply(function (x) { return Engine.settle(x, { winners: w, bonus72: b }); });
     } }));
   },
+  renderBalances: function (box) {
+    var s = UI.session, el = UI.el, last = s.hands[s.hands.length - 1], list = el('div', { className: 'ballist' });
+    s.seats.forEach(function (p) {
+      var bal = s.balances[p.id], d = last ? last.deltas[p.id] : 0;
+      list.appendChild(el('div', { className: 'balrow' }, [
+        el('span', { className: 'balname', text: p.name }),
+        el('span', { className: 'balval' + (bal > 0 ? ' pos' : ''), text: UI.fmtSigned(bal) }),
+        el('span', { className: 'baldelta', text: last ? '(' + UI.fmtSigned(d) + ')' : '' })
+      ]));
+    });
+    box.appendChild(list);
+  },
   renderBetween: function (actions) {
     var s = UI.session, el = UI.el, self = this, last = s.hands[s.hands.length - 1];
-    if (last) {
-      var parts = [];
-      s.seats.forEach(function (p) { parts.push(p.name + ' ' + UI.fmtSigned(last.deltas[p.id])); });
-      actions.appendChild(el('div', { className: 'turnname', text: 'Hand #' + last.n + (last.bonus72 ? ' (7-2)' : '') + ': ' + parts.join('   ') }));
-    }
     actions.appendChild(el('button', { className: 'huge go full', text: 'NEXT HAND', onclick: function () { self.apply(Engine.startHand); } }));
   }
 };

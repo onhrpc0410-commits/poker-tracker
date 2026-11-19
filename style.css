@@ -39,3 +39,9 @@ button.huge { min-height: 96px; font-size: 28px; font-weight: bold; }
 .raiseval { font-size: 88px; font-weight: bold; margin: 6px 0 14px; line-height: 1; }
 button.full { width: 100%; }
 .sbal.big { font-size: 28px; }
+.ballist { margin: 10px auto 0; width: min(640px, 100%); }
+.balrow { display: flex; align-items: baseline; gap: 16px; padding: 10px 6px; border-bottom: 2px solid #000; }
+.balname { flex: 1; font-size: 30px; font-weight: bold; }
+.balval { font-size: 40px; font-weight: bold; min-width: 160px; text-align: right; }
+.balval.pos { color: #1a7f37; }
+.baldelta { font-size: 20px; min-width: 110px; text-align: right; }
