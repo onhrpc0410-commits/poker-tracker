@@ -142,6 +142,46 @@ var Engine = (function () {
     return r;
   }
 
+  function settle(s, o) {
+    if (!s.hand || s.hand.phase !== 'showdown') throw new Error('Not at showdown');
+    var h = s.hand, i, id, w = o.winners || [];
+    if (!w.length) throw new Error('Pick a winner');
+    var winners = [];                                   // in seat order
+    for (i = 0; i < s.seats.length; i++) {
+      id = s.seats[i].id;
+      if (w.indexOf(id) >= 0) { if (h.folded[id]) throw new Error('Folded player cannot win'); winners.push(id); }
+    }
+    if (winners.length !== w.length) throw new Error('Unknown winner');
+    if (o.bonus72 && winners.length > 1) throw new Error('7-2 bonus needs a single winner');
+    var c = next(s), pot = 0, extra = 0, deltas = {};
+    for (i = 0; i < c.seats.length; i++) { id = c.seats[i].id; pot += h.bets[id]; deltas[id] = -h.bets[id]; }
+    if (o.bonus72) {
+      for (i = 0; i < c.seats.length; i++) {
+        id = c.seats[i].id;
+        if (id !== winners[0]) { deltas[id] -= h.bets[id]; extra += h.bets[id]; }
+      }
+    }
+    var total = pot + extra, share = Math.floor(total / winners.length), rem = total - share * winners.length;
+    for (i = 0; i < winners.length; i++) deltas[winners[i]] += share + (i < rem ? 1 : 0);
+    for (id in deltas) c.balances[id] += deltas[id];
+    c.hands.push({ n: h.n, blind: c.seats[h.blindIdx].id, pot: total, winners: winners, bonus72: !!o.bonus72, deltas: deltas, log: h.log });
+    c.hand = null;
+    return c;
+  }
+
+  function canUndo(s) { return s.undo.length > 0; }
+  function undo(s) {
+    if (!s.undo.length) throw new Error('Nothing to undo');
+    var p = JSON.parse(s.undo[s.undo.length - 1]);
+    p.undo = s.undo.slice(0, s.undo.length - 1);
+    return p;
+  }
+
+  function sessionResult(s) {
+    return s.seats.map(function (p) { return { id: p.id, name: p.name, net: s.balances[p.id] - s.startBalances[p.id] }; });
+  }
+
   return { _clone: clone, _next: next, _isInt: isInt, newSession: newSession, startHand: startHand, balances: balances,
-    legal: legal, act: act, nextRound: nextRound, toShowdown: toShowdown };
+    legal: legal, act: act, nextRound: nextRound, toShowdown: toShowdown,
+    settle: settle, canUndo: canUndo, undo: undo, sessionResult: sessionResult };
 })();

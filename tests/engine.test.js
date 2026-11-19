@@ -180,3 +180,96 @@ test('actions do not mutate the previous session', function () {
   A(s, 'call');
   assertEq(JSON.stringify(s), before);
 });
+
+// ---- Task 4: settle, 7-2 bonus, undo ----
+function showdown300() {            // A,B,C each bet 300, pot 900, phase showdown
+  var s = hand3();
+  s = A(s, 'raise', 300); s = A(s, 'call'); s = A(s, 'call');
+  return Engine.toShowdown(s);
+}
+test('settle: single winner takes the pot, sum stays 0', function () {
+  var s = Engine.settle(showdown300(), { winners: ['B'] });
+  assertEq(s.balances, { A: -300, B: 600, C: -300 });
+  assertEq(s.hands[0].deltas, { A: -300, B: 600, C: -300 });
+  assertEq(s.hands[0].pot, 900);
+  assertEq(s.hand, null);
+  assertEq(sum(Engine.balances(s)), 0);
+});
+test('settle with 7-2: losers pay their bet again', function () {
+  var s = Engine.settle(showdown300(), { winners: ['B'], bonus72: true });
+  assertEq(s.balances, { A: -600, B: 1200, C: -600 });
+  assertEq(s.hands[0].bonus72, true);
+  assertEq(sum(s.balances), 0);
+});
+test('7-2 also charges a folded player who had bet', function () {
+  var s = hand3();
+  s = A(s, 'raise', 300); s = A(s, 'fold'); s = A(s, 'call');    // B raises, C folds (0), A (blind) calls
+  s = Engine.toShowdown(s);
+  s = Engine.settle(s, { winners: ['B'], bonus72: true });
+  assertEq(s.balances, { A: -600, B: 600, C: 0 });
+});
+test('split pot of 3 between B and C: remainder to first in seat order', function () {
+  var s = hand3(1, 1000);
+  s = A(s, 'call'); s = A(s, 'call'); s = A(s, 'check');
+  s = Engine.toShowdown(s);
+  s = Engine.settle(s, { winners: ['C', 'B'] });                 // given out of seat order
+  assertEq(s.hands[0].deltas, { A: -1, B: 1, C: 0 });
+  assertEq(sum(s.balances), 0);
+});
+test('split with 7-2 is rejected', function () {
+  assertThrows(function () { Engine.settle(showdown300(), { winners: ['B', 'C'], bonus72: true }); });
+});
+test('folded player or unknown id cannot win', function () {
+  var s = hand3(); s = A(s, 'fold'); s = A(s, 'call'); s = A(s, 'check'); s = Engine.toShowdown(s);
+  assertThrows(function () { Engine.settle(s, { winners: ['B'] }); }, 'folded B');
+  assertThrows(function () { Engine.settle(s, { winners: ['Z'] }); }, 'unknown');
+  assertThrows(function () { Engine.settle(s, { winners: [] }); }, 'empty');
+});
+test('win by everyone else folding can be settled', function () {
+  var s = hand3(); s = A(s, 'fold'); s = A(s, 'fold');
+  s = Engine.settle(s, { winners: ['A'] });
+  assertEq(s.balances, { A: 0, B: 0, C: 0 });
+});
+test('settle only in showdown phase', function () {
+  assertThrows(function () { Engine.settle(hand3(), { winners: ['A'] }); });
+});
+test('three settled hands keep the total at 0 and record history', function () {
+  var s = mk(3);
+  for (var i = 0; i < 3; i++) {
+    s = Engine.startHand(s); s = A(s, 'raise', 300); s = A(s, 'call'); s = A(s, 'call');
+    s = Engine.settle(Engine.toShowdown(s), { winners: [s.seats[(i + 1) % 3].id] });
+  }
+  assertEq(sum(s.balances), 0); assertEq(s.hands.length, 3);
+  assertEq(s.hands[2].n, 3); assertEq(s.hands[1].blind, 'B');
+});
+test('undo after settle restores balances and history', function () {
+  var s = Engine.settle(showdown300(), { winners: ['B'] });
+  var u = Engine.undo(s);
+  assertEq(u.hands.length, 0); assertEq(u.balances, { A: 0, B: 0, C: 0 });
+  assertEq(u.hand.phase, 'showdown');
+});
+test('undo right after startHand returns to no hand; empty stack throws', function () {
+  var s = Engine.startHand(mk(3));
+  assertEq(Engine.canUndo(s), true);
+  var u = Engine.undo(s);
+  assertEq(u.hand, null); assertEq(Engine.canUndo(u), false);
+  assertThrows(function () { Engine.undo(u); });
+});
+test('undo across rounds restores the previous round', function () {
+  var s = hand3(); s = A(s, 'call'); s = A(s, 'call'); s = A(s, 'check');
+  s = Engine.nextRound(s);
+  var u = Engine.undo(s);
+  assertEq(u.hand.round, 1); assertEq(u.hand.phase, 'roundEnd');
+});
+test('undo survives JSON round trip (reload)', function () {
+  var s = hand3(); s = A(s, 'call');
+  var r = JSON.parse(JSON.stringify(s));
+  assertEq(Engine.undo(r).hand.log.length, 1);
+});
+test('sessionResult is balance minus starting balance', function () {
+  var ps = [{ id: 'A', name: 'A' }, { id: 'B', name: 'B' }];
+  var s = Engine.newSession({ players: ps, balances: { A: 500, B: -200 }, step: 100, limit: 1000 });
+  s = Engine.startHand(s); s = A(s, 'raise', 200); s = A(s, 'fold');   // B raises to 200, blind A folds
+  s = Engine.settle(s, { winners: ['B'] });
+  assertEq(Engine.sessionResult(s), [{ id: 'A', name: 'A', net: -100 }, { id: 'B', name: 'B', net: 100 }]);
+});
