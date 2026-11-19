@@ -53,6 +53,16 @@ var Store = (function () {
       for (var i = 0; i < list.length; i++) if (map.hasOwnProperty(list[i].id)) list[i].balance = map[list[i].id];
       savePlayers(list);
     },
+    resetBalance: function (id) {
+      var list = loadPlayers();
+      for (var i = 0; i < list.length; i++) if (list[i].id === id) list[i].balance = 0;
+      savePlayers(list);
+    },
+    resetAllBalances: function () {
+      var list = loadPlayers();
+      for (var i = 0; i < list.length; i++) list[i].balance = 0;
+      savePlayers(list);
+    },
     saveSession: function (s) { return write('pt.session', s); },
     loadSession: function () { return read('pt.session', null); },
     clearSession: function () { if (backend) { try { backend.removeItem('pt.session'); } catch (e) {} } }

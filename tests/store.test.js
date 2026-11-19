@@ -55,3 +55,13 @@ test('session save/load/clear', function () {
   Store.clearSession();
   assertEq(Store.loadSession(), null);
 });
+test('resetBalance zeroes one player, resetAllBalances zeroes everyone', function () {
+  Store._useBackend(fakeBackend());
+  var a = Store.addPlayer('A'), b = Store.addPlayer('B');
+  Store.adjustBalance(a.id, 500); Store.adjustBalance(b.id, -300);
+  Store.resetBalance(a.id);
+  assertEq(Store.loadPlayers().map(function (p) { return p.balance; }), [0, -300]);
+  Store.adjustBalance(a.id, 50);
+  Store.resetAllBalances();
+  assertEq(Store.loadPlayers().map(function (p) { return p.balance; }), [0, 0]);
+});

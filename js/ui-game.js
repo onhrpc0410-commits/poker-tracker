@@ -43,33 +43,42 @@ UI.game = {
     if (!h) self.renderBetween(actions);
     else if (h.phase === 'betting') self.renderBetting(actions);
     else if (h.phase === 'roundEnd') {
-      actions.appendChild(el('button', { className: 'big', text: 'NEXT ROUND', onclick: function () { self.apply(Engine.nextRound); } }));
-      actions.appendChild(el('button', { className: 'big', text: 'SHOWDOWN', onclick: function () { self.apply(Engine.toShowdown); } }));
+      actions.appendChild(el('div', { className: 'grid2' }, [
+        el('button', { className: 'huge', text: 'NEXT ROUND', onclick: function () { self.apply(Engine.nextRound); } }),
+        el('button', { className: 'huge', text: 'SHOWDOWN', onclick: function () { self.apply(Engine.toShowdown); } })
+      ]));
     } else self.renderShowdown(actions);
   },
   renderBetting: function (actions) {
     var s = UI.session, el = UI.el, self = this, l = Engine.legal(s);
     var who = s.seats.filter(function (p) { return p.id === l.id; })[0].name;
     actions.appendChild(el('div', { className: 'turnname', text: who + ' to act' }));
+    actions.appendChild(el('div', { className: 'grid2' }, [
+      el('button', { className: 'huge', text: l.canCheck ? 'CHECK' : 'CALL ' + UI.fmt(l.toCall),
+        onclick: function () { self.apply(function (x) { return Engine.act(x, { type: l.canCheck ? 'check' : 'call' }); }); } }),
+      el('button', { className: 'huge', text: 'RAISE', disabled: l.minRaiseTo === null ? 'disabled' : null,
+        onclick: function () { self.raiseTo = l.minRaiseTo; self.render(); } }),
+      el('button', { className: 'huge', text: 'ALL IN',
+        onclick: function () { self.apply(function (x) { return Engine.act(x, { type: 'allin' }); }); } }),
+      el('button', { className: 'huge', text: 'FOLD',
+        onclick: function () { self.apply(function (x) { return Engine.act(x, { type: 'fold' }); }); } })
+    ]));
     if (self.raiseTo !== null) {
-      actions.appendChild(el('button', { text: '-', onclick: function () { self.raiseTo = Math.max(l.minRaiseTo, self.raiseTo - s.step); self.render(); } }));
-      actions.appendChild(el('b', { className: 'raisev', text: 'RAISE TO ' + UI.fmt(self.raiseTo) }));
-      actions.appendChild(el('button', { text: '+', onclick: function () { self.raiseTo = Math.min(l.maxRaiseTo, self.raiseTo + s.step); self.render(); } }));
-      actions.appendChild(el('button', { className: 'big go', text: 'CONFIRM', onclick: function () {
-        var r = self.raiseTo; self.apply(function (x) { return Engine.act(x, { type: 'raise', raiseTo: r }); });
-      } }));
-      actions.appendChild(el('button', { text: 'CANCEL', onclick: function () { self.raiseTo = null; self.render(); } }));
-    } else {
-      actions.appendChild(el('div', { className: 'grid2' }, [
-        el('button', { className: 'huge', text: l.canCheck ? 'CHECK' : 'CALL ' + UI.fmt(l.toCall),
-          onclick: function () { self.apply(function (x) { return Engine.act(x, { type: l.canCheck ? 'check' : 'call' }); }); } }),
-        el('button', { className: 'huge', text: 'RAISE', disabled: l.minRaiseTo === null ? 'disabled' : null,
-          onclick: function () { self.raiseTo = l.minRaiseTo; self.render(); } }),
-        el('button', { className: 'huge', text: 'ALL IN',
-          onclick: function () { self.apply(function (x) { return Engine.act(x, { type: 'allin' }); }); } }),
-        el('button', { className: 'huge', text: 'FOLD',
-          onclick: function () { self.apply(function (x) { return Engine.act(x, { type: 'fold' }); }); } })
-      ]));
+      var panel = el('div', { className: 'panel' }, [
+        el('div', { className: 'panelname', text: who + ' RAISE TO' }),
+        el('div', { className: 'raiseval', text: UI.fmt(self.raiseTo) }),
+        el('div', { className: 'grid2' }, [
+          el('button', { className: 'huge', text: '- ' + UI.fmt(s.step), disabled: self.raiseTo <= l.minRaiseTo ? 'disabled' : null,
+            onclick: function () { self.raiseTo = Math.max(l.minRaiseTo, self.raiseTo - s.step); self.render(); } }),
+          el('button', { className: 'huge', text: '+ ' + UI.fmt(s.step), disabled: self.raiseTo >= l.maxRaiseTo ? 'disabled' : null,
+            onclick: function () { self.raiseTo = Math.min(l.maxRaiseTo, self.raiseTo + s.step); self.render(); } }),
+          el('button', { className: 'huge', text: 'CANCEL', onclick: function () { self.raiseTo = null; self.render(); } }),
+          el('button', { className: 'huge go', text: 'CONFIRM', onclick: function () {
+            var r = self.raiseTo; self.apply(function (x) { return Engine.act(x, { type: 'raise', raiseTo: r }); });
+          } })
+        ])
+      ]);
+      document.getElementById('screen-game').appendChild(el('div', { className: 'overlay' }, [panel]));
     }
   },
   renderShowdown: function (actions) {

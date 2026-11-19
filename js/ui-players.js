@@ -25,6 +25,10 @@ UI.players = {
         self.render();
       } })]));
     root.appendChild(err);
+    root.appendChild(el('button', { text: 'RESET ALL TO 0', style: 'margin-right:10px', onclick: function () {
+      if (UI.session) { self.error = 'Finish or discard the game first.'; self.render(); return; }
+      if (confirm('Reset EVERYONE to 0? This cannot be undone.')) { Store.resetAllBalances(); self.render(); }
+    } }));
     root.appendChild(el('button', { className: 'go', text: 'NEW GAME', disabled: list.length < 2 ? 'disabled' : null,
       onclick: function () { UI.showScreen('setup'); } }));
     if (list.length < 2) root.appendChild(el('span', { text: '  Add at least 2 players.' }));
@@ -41,6 +45,10 @@ UI.players = {
         var n = amt.value === '' ? NaN : Number(amt.value);
         try { Store.adjustBalance(p.id, n); self.error = ''; } catch (e) { self.error = e.message; }
         self.render();
+      } }),
+      el('button', { text: 'RESET 0', onclick: function () {
+        if (UI.session) { self.error = 'Finish or discard the game first.'; self.render(); return; }
+        if (confirm('Reset ' + p.name + ' to 0?')) { Store.resetBalance(p.id); self.render(); }
       } }),
       el('button', { text: 'DELETE', onclick: function () {
         if (UI.session) { self.error = 'Finish or discard the game first.'; self.render(); return; }

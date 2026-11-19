@@ -273,3 +273,18 @@ test('sessionResult is balance minus starting balance', function () {
   s = Engine.settle(s, { winners: ['B'] });
   assertEq(Engine.sessionResult(s), [{ id: 'A', name: 'A', net: -100 }, { id: 'B', name: 'B', net: 100 }]);
 });
+
+// ---- 4 betting rounds: pre-flop, flop, turn, river; round 4 ends straight at showdown ----
+function checkAround(s) { s = A(s, 'check'); s = A(s, 'check'); return A(s, 'check'); }
+test('round 4 finishing goes straight to showdown (no more NEXT ROUND)', function () {
+  var s = hand3(); s = A(s, 'call'); s = A(s, 'call'); s = A(s, 'check');   // round 1
+  assertEq(s.hand.phase, 'roundEnd');
+  s = Engine.nextRound(s); s = checkAround(s); assertEq(s.hand.round, 2); assertEq(s.hand.phase, 'roundEnd');
+  s = Engine.nextRound(s); s = checkAround(s); assertEq(s.hand.round, 3); assertEq(s.hand.phase, 'roundEnd');
+  s = Engine.nextRound(s); s = checkAround(s); assertEq(s.hand.round, 4); assertEq(s.hand.phase, 'showdown');
+});
+test('nextRound is allowed exactly 3 times per hand', function () {
+  var s = hand3(); s = A(s, 'call'); s = A(s, 'call'); s = A(s, 'check');
+  for (var i = 0; i < 3; i++) { s = Engine.nextRound(s); s = checkAround(s); }
+  assertThrows(function () { Engine.nextRound(s); });
+});

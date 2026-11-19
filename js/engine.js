@@ -1,4 +1,5 @@
 var Engine = (function () {
+  var MAX_ROUNDS = 4;   // pre-flop, flop, turn, river
   function clone(o) { return JSON.parse(JSON.stringify(o)); }
   function isInt(n) { return typeof n === 'number' && isFinite(n) && Math.floor(n) === n; }
 
@@ -73,7 +74,7 @@ var Engine = (function () {
       var id = s.seats[can[i]].id;
       if (!h.acted[id] || h.roundBets[id] !== h.currentBet) done = false;
     }
-    if (done) { h.phase = can.length <= 1 ? 'showdown' : 'roundEnd'; return; }
+    if (done) { h.phase = (can.length <= 1 || h.round >= MAX_ROUNDS) ? 'showdown' : 'roundEnd'; return; }
     h.phase = 'betting';
     if (h.turnIdx < 0 || h.folded[seatId(s, h.turnIdx)] || h.allIn[seatId(s, h.turnIdx)]) h.turnIdx = nextActor(s, h.turnIdx);
   }
@@ -122,7 +123,7 @@ var Engine = (function () {
   }
 
   function nextRound(s) {
-    if (!s.hand || s.hand.phase !== 'roundEnd') throw new Error('Round is not finished');
+    if (!s.hand || s.hand.phase !== 'roundEnd' || s.hand.round >= MAX_ROUNDS) throw new Error('Round is not finished');
     var c = next(s), h = c.hand;
     for (var i = 0; i < c.seats.length; i++) h.roundBets[c.seats[i].id] = 0;
     h.currentBet = 0; h.acted = {}; h.round += 1; h.phase = 'betting';

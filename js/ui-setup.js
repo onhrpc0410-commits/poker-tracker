@@ -16,7 +16,10 @@ UI.setup = {
             if (idx >= 0) self.picked.splice(idx, 1); else self.picked.push(p.id);
             self.render();
           } }),
-        el('span', { text: UI.fmt(p.balance) })
+        el('span', { className: 'grow', text: UI.fmt(p.balance) }),
+        el('button', { text: 'RESET 0', onclick: function () {
+          if (confirm('Reset ' + p.name + ' to 0?')) { Store.resetBalance(p.id); self.render(); }
+        } })
       ]));
     });
     var step = el('input', { type: 'number', value: self.step, min: '1', step: '1' });
@@ -25,6 +28,9 @@ UI.setup = {
     limit.oninput = function () { self.limit = limit.value; };
     root.appendChild(el('div', { className: 'row' }, [el('span', { text: 'RAISE STEP' }), step, el('span', { text: 'ALL IN LIMIT' }), limit]));
     root.appendChild(el('div', { className: 'err', text: self.error }));
+    root.appendChild(el('button', { text: 'RESET ALL TO 0', style: 'margin-right:10px', onclick: function () {
+      if (confirm('Reset EVERYONE to 0? This cannot be undone.')) { Store.resetAllBalances(); self.render(); }
+    } }));
     root.appendChild(el('button', { text: 'BACK', onclick: function () { UI.showScreen('players'); } }));
     root.appendChild(el('button', { className: 'go', text: 'START', style: 'margin-left:10px', onclick: function () {
       try {
