@@ -10,7 +10,7 @@ UI.game = {
     var s = UI.session, root = document.getElementById('screen-game'), el = UI.el, self = this;
     UI.clear(root);
     if (!s) { UI.showScreen('players'); return; }
-    var h = s.hand, bal = Engine.balances(s), pot = 0, id;
+    var h = s.hand, pot = 0, id;
     if (h) for (id in h.bets) pot += h.bets[id];
     root.appendChild(el('div', { className: 'potbg', text: UI.fmt(pot) }));
     var box = el('div', { className: 'gamebox' });
@@ -29,11 +29,11 @@ UI.game = {
       if (turn) cls += ' turn';
       if (h && h.folded[p.id]) cls += ' folded';
       var bet = '';
-      if (h) bet = h.folded[p.id] ? 'FOLD' : (h.allIn[p.id] ? 'ALL IN ' + UI.fmt(h.bets[p.id]) : 'bet ' + UI.fmt(h.bets[p.id]));
+      if (h) bet = h.folded[p.id] ? 'FOLD' : UI.fmt(h.bets[p.id]);
       seats.appendChild(el('div', { className: cls }, [
         el('div', { className: 'sname', text: (h && h.blindIdx === i ? '[B] ' : '') + p.name }),
-        el('div', { className: 'sbal ' + (bal[p.id] < 0 ? 'neg' : ''), text: UI.fmt(bal[p.id]) }),
-        el('div', { className: 'sbet', text: bet })
+        el('div', { className: 'sbal', text: bet }),
+        el('div', { className: 'sbet', text: h && h.allIn[p.id] && !h.folded[p.id] ? 'ALL IN' : '' })
       ]));
     });
     box.appendChild(seats);
@@ -51,8 +51,6 @@ UI.game = {
     var s = UI.session, el = UI.el, self = this, l = Engine.legal(s);
     var who = s.seats.filter(function (p) { return p.id === l.id; })[0].name;
     actions.appendChild(el('div', { className: 'turnname', text: who + ' to act' }));
-    actions.appendChild(el('button', { className: 'big', text: l.canCheck ? 'CHECK' : 'CALL ' + UI.fmt(l.toCall),
-      onclick: function () { self.apply(function (x) { return Engine.act(x, { type: l.canCheck ? 'check' : 'call' }); }); } }));
     if (self.raiseTo !== null) {
       actions.appendChild(el('button', { text: '-', onclick: function () { self.raiseTo = Math.max(l.minRaiseTo, self.raiseTo - s.step); self.render(); } }));
       actions.appendChild(el('b', { className: 'raisev', text: 'RAISE TO ' + UI.fmt(self.raiseTo) }));
@@ -62,12 +60,16 @@ UI.game = {
       } }));
       actions.appendChild(el('button', { text: 'CANCEL', onclick: function () { self.raiseTo = null; self.render(); } }));
     } else {
-      actions.appendChild(el('button', { className: 'big', text: 'RAISE', disabled: l.minRaiseTo === null ? 'disabled' : null,
-        onclick: function () { self.raiseTo = l.minRaiseTo; self.render(); } }));
-      actions.appendChild(el('button', { className: 'big', text: 'ALL IN',
-        onclick: function () { self.apply(function (x) { return Engine.act(x, { type: 'allin' }); }); } }));
-      actions.appendChild(el('button', { className: 'big', text: 'FOLD',
-        onclick: function () { self.apply(function (x) { return Engine.act(x, { type: 'fold' }); }); } }));
+      actions.appendChild(el('div', { className: 'grid2' }, [
+        el('button', { className: 'huge', text: l.canCheck ? 'CHECK' : 'CALL ' + UI.fmt(l.toCall),
+          onclick: function () { self.apply(function (x) { return Engine.act(x, { type: l.canCheck ? 'check' : 'call' }); }); } }),
+        el('button', { className: 'huge', text: 'RAISE', disabled: l.minRaiseTo === null ? 'disabled' : null,
+          onclick: function () { self.raiseTo = l.minRaiseTo; self.render(); } }),
+        el('button', { className: 'huge', text: 'ALL IN',
+          onclick: function () { self.apply(function (x) { return Engine.act(x, { type: 'allin' }); }); } }),
+        el('button', { className: 'huge', text: 'FOLD',
+          onclick: function () { self.apply(function (x) { return Engine.act(x, { type: 'fold' }); }); } })
+      ]));
     }
   },
   renderShowdown: function (actions) {
